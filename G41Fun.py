@@ -2038,7 +2038,7 @@ def SMDegrain(clip, tr=2, thSAD=314, thSADC=None, RefineMotion=False, contrashar
     elif prefilter == 3:
         expr = 'x {a} < {p} x {b} > 0 {p} x {a} - {p} {b} {a} - / * - ? ?'.format(a=16*i, b=75*i, p=peak)
         mask = core.std.Expr([core.std.ShufflePlanes(inpu, [0], vs.GRAY)], [expr])
-        pref = core.std.MaskedMerge(core.dfttest.DFTTest(inpu, tbsize=1, sstring='0.0:4.0 0.2:9.0 1.0:15.0', planes=planes), inpu, mask)
+        pref = core.std.MaskedMerge(core.dfttest.DFTTest(inpu, tbsize=1, slocation=[0.0,4.0, 0.2,9.0, 1.0,15.0], planes=planes), inpu, mask)
     elif prefilter == 4:
         pref = haf.KNLMeansCL(inpu, d=1, a=1, h=7) if chroma else inpu.knlm.KNLMeansCL(d=1, a=1, h=7)
     elif prefilter == 5:
@@ -3302,8 +3302,8 @@ def SpotLess(clip, chroma=True, rec=False, analyse_args=None, recalculate_args=N
     return fcb.tmedian.TemporalMedian(1, planes)[1::3]
 
 
-def HQDeringmod(clip, p=None, ringmask=None, mrad=1, msmooth=1, incedge=False, mthr=57, minp=1, nrmode=None, sharp=1, drrep=13,
-                thr=12., elast=2., darkthr=None, sbsize=None, sosize=None, sigma=128, sigma2=None, planes=[0], show=False):
+def HQDeringmod(clip, p=None, ringmask=None, mrad=1, msmooth=1, incedge=False, mthr=57, minp=1, nrmode=None,
+                sharp=1, drrep=13, thr=12., elast=2., darkthr=None, planes=[0], show=False):
     """
     HQDering modded by mawen1250
 
@@ -3318,7 +3318,7 @@ def HQDeringmod(clip, p=None, ringmask=None, mrad=1, msmooth=1, incedge=False, m
     mthr    (int)   - Threshold of edge mask, lower value means more aggressive processing. Or define your own mask clip "ringmask".
                       But for strong ringing, lower value will treat some ringing as edge, which protects this ringing from being processed.
     minp    (int)   - Inpanding of edge mask, higher value means more aggressive processing.
-    nrmode  (int)   - Kernel of dering - 0: dfttest 1: MinBlur(radius=1), 2: MinBlur(radius=2), 3: MinBlur(radius=3). Or define your own smoothed clip "p".
+    nrmode  (int)   - Kernel of dering - 1: MinBlur(radius=1), 2: MinBlur(radius=2), 3: MinBlur(radius=3). Or define your own smoothed clip "p".
     sharp   (int)   - Whether to use contra-sharpening to resharp deringed clip, 1-3 represents radius, 0 means no sharpening.
     drrep   (int)   - Use repair for details retention, recommended values are 24/13/12/1.
     thr     (float) - Threshold to limit filtering diff.
@@ -3328,10 +3328,6 @@ def HQDeringmod(clip, p=None, ringmask=None, mrad=1, msmooth=1, incedge=False, m
                       Larger "elast" will result in more pixels being blended from processed&clip clip, for smoother merging
     darkthr (float) - Threshold for darker area near edges, set it lower if you think deringing destroys too much lines, etc.
                       When "darkthr" is not equal to "thr", "thr" limits darkening while "darkthr" limits brightening
-    sigma   (float) - dfttest: sigma for medium frequecies
-    sigma2  (float) - dfttest: sigma for low&high frequecies
-    sbsize  (int)   - dfttest: length of the sides of the spatial window
-    sosize  (int)   - dfttest: spatial overlap amount
     planes  (int[]) - Whether to process the corresponding plane. The other planes will be passed through unchanged.
     show    (bool)  - Whether to output mask clip instead of filtered clip.
     """
@@ -3358,14 +3354,8 @@ def HQDeringmod(clip, p=None, ringmask=None, mrad=1, msmooth=1, incedge=False, m
         raise TypeError("HQDeringmod: ringmask must be the same size as clip!")
     if nrmode is None:
         nrmode = 2 if if4 else 1
-    if sbsize is None:
-        sbsize = 8 if if4 else 6
-    if sosize is None:
-        sosize = 6 if if4 else 4
     if darkthr is None:
         darkthr = thr / 4
-    if sigma2 is None:
-        sigma2 = sigma / 8
     if clip.format.num_planes == 1:
         planes = [0]
     if isinstance(planes, int):
@@ -3373,11 +3363,7 @@ def HQDeringmod(clip, p=None, ringmask=None, mrad=1, msmooth=1, incedge=False, m
 
     # Kernel: Smoothing
     if p is None:
-        if nrmode == 0:
-            ss = "0.0:{s2} 0.05:{s} 0.5:{s} 0.75:{s2} 1.0:0.0".format(s=sigma, s2=sigma2)
-            p = core.dfttest.DFTTest(clip, sbsize=sbsize, sosize=sosize, tbsize=1, sstring=ss)
-        else:
-            p = MinBlur(clip, nrmode, planes)
+        p = MinBlur(clip, nrmode, planes)
 
     # Post-Process: Contra-Sharpening
     sclp = p if sharp <= 0 else ContraSharpening(p, clip, sharp, drrep, planes)
