@@ -5,7 +5,7 @@ import havsfunc as haf
 import mvsfunc as mvf
 import muvsfunc as muf
 import nnedi3_resample as nnrs
-import math, mvmulti
+import math
 
 """
 Copyright 2019 Pao-Ming Lin
@@ -302,7 +302,7 @@ def MCDegrainSharp(clip, tr=3, bblur=.69, csharp=.69, thSAD=400, rec=False, chro
             bv3 = A(super_b, isb=True,  delta=3, **analyse_args)
             fv3 = A(super_b, isb=False, delta=3, **analyse_args)
     else:
-        vec = mvmulti.Analyze(super_b, tr=tr, **analyse_args)
+        vec = core.mvmulti.Analyze(super_b, tr=tr, **analyse_args)
     
     if rec:
         if tr < 4:
@@ -315,7 +315,7 @@ def MCDegrainSharp(clip, tr=3, bblur=.69, csharp=.69, thSAD=400, rec=False, chro
                 bv3 = R(super_b, bv3, **recalculate_args)
                 fv3 = R(super_b, fv3, **recalculate_args)    
         else:
-            vec = mvmulti.Recalculate(super_b, vec, tr=tr, **recalculate_args)
+            vec = core.mvmulti.Recalculate(super_b, vec, tr=tr, **recalculate_args)
     
     if tr <= 1:
         return D1(c2, super_rend, bv1, fv1, thSAD, plane=plane)
@@ -324,7 +324,7 @@ def MCDegrainSharp(clip, tr=3, bblur=.69, csharp=.69, thSAD=400, rec=False, chro
     elif tr == 3:
         return D3(c2, super_rend, bv1, fv1, bv2, fv2, bv3, fv3, thSAD, plane=plane)
     else:
-        return mvmulti.DegrainN(c2, super_rend, vec, tr=tr, thsad=thSAD, plane=plane)
+        return core.mvmulti.DegrainN(c2, super_rend, vec, tr=tr, thsad=thSAD, plane=plane)
 
 
 def LSFmod(clip, strength=100, Smode=None, Smethod=None, kernel=11, preblur=False, secure=None, source=None,
@@ -2102,7 +2102,7 @@ def SMDegrain(clip, tr=2, thSAD=314, thSADC=None, RefineMotion=False, contrashar
     else:
         vec = Analyze(super_search, tr=tr, d=interlaced, **analyse_args)
         if RefineMotion:
-            vec = mvmulti.Recalculate(super_search, vec, tr=tr, **recalculate_args)
+            vec = core.mvmulti.Recalculate(super_search, vec, tr=tr, **recalculate_args)
 
     # Finally, MDegrain
     if isFLOAT:
@@ -2126,7 +2126,7 @@ def SMDegrain(clip, tr=2, thSAD=314, thSADC=None, RefineMotion=False, contrashar
             else:
                 output = D1(mfilter, super_render, bv1, fv1, **degrain_args)
     else:
-        output = mvmulti.DegrainN(mfilter, super_render, vec, tr=tr, **degrain_args)
+        output = core.mvmulti.DegrainN(mfilter, super_render, vec, tr=tr, **degrain_args)
 
     # Contrasharp (only sharpens luma)
     if contrasharp:
@@ -2325,14 +2325,14 @@ def TemporalDegrain2(clip, degrainTR=2, degrainPlane=4, meAlg=5, meAlgPar=None, 
                 fVec3 = R(srchSuper, fVec3, **recalculate_args)
 
     if degrainTR > 3:
-        vmulti1 = mvmulti.Analyze(srchSuper, tr=degrainTR, **analyse_args)
+        vmulti1 = core.mvmulti.Analyze(srchSuper, tr=degrainTR, **analyse_args)
         if rec:
-            vmulti1 = mvmulti.Recalculate(srchSuper, vmulti1, tr=degrainTR, **recalculate_args)
+            vmulti1 = core.mvmulti.Recalculate(srchSuper, vmulti1, tr=degrainTR, **recalculate_args)
 
     if postTR > 3:
-        vmulti2 = mvmulti.Analyze(srchSuper, tr=postTR, **analyse_args)
+        vmulti2 = core.mvmulti.Analyze(srchSuper, tr=postTR, **analyse_args)
         if rec:
-            vmulti2 = mvmulti.Recalculate(srchSuper, vmulti2, tr=postTR, **recalculate_args)
+            vmulti2 = core.mvmulti.Recalculate(srchSuper, vmulti2, tr=postTR, **recalculate_args)
     #---------------------------------------
     # Degrain
     # "spat" is a prefiltered clip which is used to limit the effect of the 1st MV-denoise stage.
@@ -2356,7 +2356,7 @@ def TemporalDegrain2(clip, degrainTR=2, degrainPlane=4, meAlg=5, meAlgPar=None, 
         elif degrainTR < 4:
             NR1 = D3(clip, supero, bVec1, fVec1, bVec2, fVec2, bVec3, fVec3, plane=degrainPlane, thsad=thSAD1, thscd1=thSCD1, thscd2=thSCD2)
         else:
-            NR1 = mvmulti.DegrainN(clip, supero, vmulti1, tr=degrainTR, plane=degrainPlane, thsad=thSAD1, thscd1=thSCD1, thscd2=thSCD2)
+            NR1 = core.mvmulti.DegrainN(clip, supero, vmulti1, tr=degrainTR, plane=degrainPlane, thsad=thSAD1, thscd1=thSCD1, thscd2=thSCD2)
 
     # Limit NR1 to not do more than what "spat" would do.
     if degrainTR > 0:
@@ -2376,7 +2376,7 @@ def TemporalDegrain2(clip, degrainTR=2, degrainPlane=4, meAlg=5, meAlgPar=None, 
         elif degrainTR < 4:
             NR2 = D3(NR1x, NR1x_super, bVec1, fVec1, bVec2, fVec2, bVec3, fVec3, plane=degrainPlane, thsad=thSAD2, thscd1=thSCD1, thscd2=thSCD2)
         else:
-            NR2 = mvmulti.DegrainN(NR1x, NR1x_super, vmulti1, tr=degrainTR, plane=degrainPlane, thsad=thSAD2, thscd1=thSCD1, thscd2=thSCD2)
+            NR2 = core.mvmulti.DegrainN(NR1x, NR1x_super, vmulti1, tr=degrainTR, plane=degrainPlane, thsad=thSAD2, thscd1=thSCD1, thscd2=thSCD2)
     else:
         NR2 = clip
     
@@ -2404,7 +2404,7 @@ def TemporalDegrain2(clip, degrainTR=2, degrainPlane=4, meAlg=5, meAlgPar=None, 
                                                C(NR2, fullSuper, bVec2, thscd1=thSCD1, thscd2=thSCD2),
                                                C(NR2, fullSuper, bVec3, thscd1=thSCD1, thscd2=thSCD2)])
         else:
-            noiseWindow = mvmulti.Compensate(NR2, fullSuper, vmulti2, thscd1=thSCD1, thscd2=thSCD2, tr=postTR)
+            noiseWindow = core.mvmulti.Compensate(NR2, fullSuper, vmulti2, thscd1=thSCD1, thscd2=thSCD2, tr=postTR)
     else:
         noiseWindow = NR2
     
@@ -2650,7 +2650,7 @@ def STPressoHD(clip, limit=4, bias=20, tlimit=4, tbias=40, conv=[1]*25, thSAD=40
                 bv3 = A(super_b, isb=True,  delta=3, **analyse_args)
                 fv3 = A(super_b, isb=False, delta=3, **analyse_args)
         else:
-            vec = mvmulti.Analyze(super_b, tr=tr, **analyse_args)
+            vec = core.mvmulti.Analyze(super_b, tr=tr, **analyse_args)
         
         if rec:
             if tr < 4:
@@ -2663,7 +2663,7 @@ def STPressoHD(clip, limit=4, bias=20, tlimit=4, tbias=40, conv=[1]*25, thSAD=40
                     bv3 = R(super_b, bv3, **recalculate_args)
                     fv3 = R(super_b, fv3, **recalculate_args)    
             else:
-                vec = mvmulti.Recalculate(super_b, vec, tr=tr, **recalculate_args)
+                vec = core.mvmulti.Recalculate(super_b, vec, tr=tr, **recalculate_args)
 
     bd = clip.format.bits_per_sample
     peak = 1.0 if isFLOAT else (1 << bd) - 1
@@ -2694,7 +2694,7 @@ def STPressoHD(clip, limit=4, bias=20, tlimit=4, tbias=40, conv=[1]*25, thSAD=40
         elif tr == 3:
             temp = D3(spat, super_rend, bv1, fv1, bv2, fv2, bv3, fv3, thSAD, plane=plane)
         else:
-            temp = mvmulti.DegrainN(spat, super_rend, vec, tr=tr, thsad=thSAD, plane=plane)
+            temp = core.mvmulti.DegrainN(spat, super_rend, vec, tr=tr, thsad=thSAD, plane=plane)
         
         diff = core.std.Expr([down, temp, spat], ['x y + z -' if i in planes else '' for i in range(clip.format.num_planes)])
     
@@ -2805,7 +2805,7 @@ def MLD_helper(clip, srch, tr, thSAD, rec, chroma, soft):
             bv3 = A(sup1, isb=True,  delta=3, **analyse_args)
             fv3 = A(sup1, isb=False, delta=3, **analyse_args)
     else:
-        vec = mvmulti.Analyze(sup1, tr=tr, **analyse_args)
+        vec = core.mvmulti.Analyze(sup1, tr=tr, **analyse_args)
         
     if rec:
         if tr < 4:
@@ -2818,7 +2818,7 @@ def MLD_helper(clip, srch, tr, thSAD, rec, chroma, soft):
                 bv3 = R(sup1, bv3, **recalculate_args)
                 fv3 = R(sup1, fv3, **recalculate_args)    
         else:
-            vec = mvmulti.Recalculate(sup1, vec, tr=tr, **recalculate_args)
+            vec = core.mvmulti.Recalculate(sup1, vec, tr=tr, **recalculate_args)
     
     if tr < 4:
         if tr == 1:
@@ -2828,7 +2828,7 @@ def MLD_helper(clip, srch, tr, thSAD, rec, chroma, soft):
         else:
             return D3(RG, sup2, bv1, fv1, bv2, fv2, bv3, fv3, thsad=thSAD, plane=plane)
     else:
-        return mvmulti.DegrainN(RG, sup2, vec, tr=tr, thsad=thSAD, plane=plane)
+        return core.mvmulti.DegrainN(RG, sup2, vec, tr=tr, thsad=thSAD, plane=plane)
 
 
 def NonlinUSM(clip, z=6.0, power=1.6, sstr=1, rad=9.0, ldmp=0.01, hdmp=0.01):
